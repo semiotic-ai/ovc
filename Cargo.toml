@@ -7,7 +7,9 @@ edition = "2021"
 
 [dependencies]
 ark-bn254 = "0.4.0"
+ark-crypto-primitives = { version = "0.4.0", features = ["merkle_tree"] }
 ark-ec = "0.4.2"
+ark-serialize = "0.4.2"
 reth-primitives = { git = "https://github.com/paradigmxyz/reth", version = "0.1.0-alpha.10" }
 
 [dev-dependencies]
