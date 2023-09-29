@@ -19,6 +19,7 @@ cita_trie = {git = "https://github.com/severiano-sisneros/cita_trie.git"}
 hasher = "0.1.4"
 serde = "1.0.188"
 revm-primitives = "=1.1.2"
+anyhow = "1.0.75"
 
 
 [dev-dependencies]

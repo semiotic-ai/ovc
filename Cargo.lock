@@ -1717,6 +1717,7 @@ dependencies = [
 name = "ovc"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "ark-bn254",
  "ark-crypto-primitives",
  "ark-ec",
