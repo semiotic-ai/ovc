@@ -134,10 +134,12 @@ mod tests {
             commit_key.push(G1Projective::rand(&mut rng));
         }
 
-        // Generate random vector of Fr
-        let mut hashed_logs_vec: Vec<Fr> = Vec::new();
-        for _ in 0..8 {
-            hashed_logs_vec.push(Fr::rand(&mut rng));
+        // Read receipts and commit
+        let receipts_json = std::fs::read("receipts_full.json").unwrap();
+        let receipts: Vec<Receipt> = serde_json::from_slice(receipts_json.as_slice()).unwrap();
+        let mut hashed_logs_vec = Vec::new();
+        for idx in 0..8 {
+            hashed_logs_vec.push(hash_receipts_vec(&receipts[idx]));
         }
 
         // Compute Merkle tree
