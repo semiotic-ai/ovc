@@ -59,20 +59,8 @@ pub fn hash_receipts_vec(receipt: &Receipt) -> Fr
     hasher.hash_to_field(receipt_bytes.as_slice(), 1)[0]
 }
 
-// Open a commitment to an event log and prove inclusion in an Ethereum block header
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct EncodedTrie {
-    pub root: Vec<u8>,
-    pub trie: Vec<Vec<usize>>,
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct Inputs {
-    pub trie: EncodedTrie,
-}
-
-pub fn build_from_receipts(receipts: Vec<Receipt>) -> EncodedTrie {
+// Build a Merkle-Patricia trie from Receipts
+pub fn build_from_receipts(receipts: Vec<Receipt>) -> PatriciaTrie<MemoryDB, HasherKeccak> {
     let memdb = Arc::new(MemoryDB::new(true));
     let hasher = Arc::new(HasherKeccak::new());
 
@@ -90,63 +78,7 @@ pub fn build_from_receipts(receipts: Vec<Receipt>) -> EncodedTrie {
         trie.insert(key_buf.to_vec(), value_buf.to_vec()).unwrap();
     }
 
-    let trie_vec = Rc::new(RefCell::new(Vec::new()));
-    
-    let root_node = trie.root.clone();
-    encode_trie_rec(root_node, trie_vec.clone());
-    let root = trie.root().unwrap();
-    trie_vec.borrow_mut().reverse();
-
-    EncodedTrie {
-        root,
-        trie: Rc::try_unwrap(trie_vec).unwrap().into_inner(),
-    }
-}
-
-fn encode_trie_rec(root: Node, state: Rc<RefCell<Vec<Vec<usize>>>>) -> usize {
-    match root {
-        Node::Branch(branch) => {
-            let borrow_branch = branch.borrow();
-
-            if borrow_branch.value.is_some() {
-                panic!("unexpected branch node with value");
-            }
-
-            let mut children = Vec::new();
-            for i in 0..16 {
-                let child = borrow_branch.children[i].clone();
-
-                let child_idx = encode_trie_rec(child, state.clone());
-                children.push(child_idx);
-            }
-
-            let mut state_inner = state.borrow_mut();
-            state_inner.push(children);
-            state_inner.len()
-        }
-        Node::Leaf(leaf) => {
-            let borrow_leaf = leaf.borrow();
-
-            let mut stream = RlpStream::new_list(2);
-            stream.append(&borrow_leaf.key.encode_compact());
-            stream.append(&borrow_leaf.value);
-
-            let buf = stream.out().to_vec();
-            let buf = buf
-                .iter()
-                .cloned()
-                .map(|e| e as usize)
-                .collect::<Vec<usize>>();
-
-            let mut state_inner = state.borrow_mut();
-            state_inner.push(buf);
-            state_inner.len()
-        }
-        Node::Empty => 0,
-        _ => {
-            panic!("unexpected node type");
-        }
-    }
+    trie
 }
 
 #[cfg(test)]
@@ -225,11 +157,30 @@ mod tests {
         let receipts_json = std::fs::read("receipts_full.json").unwrap();
         let receipts: Vec<Receipt> = serde_json::from_slice(receipts_json.as_slice()).unwrap();
     
-        let trie = build_from_receipts(receipts);
+        let mut trie = build_from_receipts(receipts);
     
-        let root = trie.root.clone();
+        let root = trie.root().unwrap();
         println!("root: {:?}", root);
     
+    }
+
+    #[test]
+    fn test_inclusion_proof() {
+        let receipts_json = std::fs::read("receipts_full.json").unwrap();
+        let receipts: Vec<Receipt> = serde_json::from_slice(receipts_json.as_slice()).unwrap();
+
+        let mut trie = build_from_receipts(receipts.clone());
+        let key = 1;
+        let proof = trie.get_proof(&[key]).unwrap();
+        let root = trie.root().unwrap();
+        assert!(trie.verify_proof(root.as_slice(), &[key], proof).is_ok());
+        
+        let test_receipt = receipts[key as usize].clone();
+        let bloom_receipt = ReceiptWithBloomRef::from(&test_receipt);
+        let mut value_buf = BytesMut::new();
+        bloom_receipt.encode_inner(&mut value_buf, false);
+
+        assert_eq!(trie.get(&[key]).unwrap(), Some(value_buf.to_vec()));
     }
 
 }
