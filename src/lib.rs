@@ -1,4 +1,3 @@
-
 use ark_bn254::{Fr, G1Projective};
 use ark_crypto_primitives::merkle_tree::DigestConverter;
 use ark_crypto_primitives::{

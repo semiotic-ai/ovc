@@ -12,7 +12,6 @@ ark-ec = "0.4.2"
 ark-serialize = "0.4.2"
 reth-primitives = { git = "https://github.com/paradigmxyz/reth", version = "0.1.0-alpha.4", tag = "v0.1.0-alpha.4" }
 reth-codecs = { git = "https://github.com/paradigmxyz/reth", tag = "v0.1.0-alpha.4" }
-reth-trie = { git = "https://github.com/paradigmxyz/reth", tag = "v0.1.0-alpha.4" }
 reth-rlp = { git = "https://github.com/paradigmxyz/reth", tag = "v0.1.0-alpha.4" }
 ark-ff = "0.4.2"
 cita_trie = {git = "https://github.com/severiano-sisneros/cita_trie.git"}

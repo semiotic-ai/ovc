@@ -1,7 +1,6 @@
-
 // Test module for OVC
 #[cfg(test)]
-mod ovc_tests{
+mod ovc_tests {
     use crate::*;
     use ark_bn254::G1Projective as G;
     use ark_ec::{CurveGroup, VariableBaseMSM};
@@ -9,26 +8,24 @@ mod ovc_tests{
     use serde_json;
     use std::sync::Arc;
 
-    fn build_from_receipts(
-        receipts: Vec<Receipt>,
-    ) -> PatriciaTrie<MemoryDB, HasherKeccak> {
+    fn build_from_receipts(receipts: Vec<Receipt>) -> PatriciaTrie<MemoryDB, HasherKeccak> {
         let memdb = Arc::new(MemoryDB::new(true));
         let hasher = Arc::new(HasherKeccak::new());
-    
+
         let mut trie = PatriciaTrie::new(memdb.clone(), hasher.clone());
         let mut key_buf = BytesMut::new();
         let mut value_buf = BytesMut::new();
-    
+
         for (idx, receipt) in receipts.iter().enumerate() {
             key_buf.clear();
             idx.encode(&mut key_buf);
-    
+
             value_buf.clear();
             let bloom_receipt = ReceiptWithBloomRef::from(receipt);
             bloom_receipt.encode_inner(&mut value_buf, false);
             trie.insert(key_buf.to_vec(), value_buf.to_vec()).unwrap();
         }
-    
+
         trie
     }
 
@@ -220,5 +217,4 @@ mod ovc_tests{
             }
         }
     }
-
 }
