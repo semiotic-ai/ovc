@@ -79,7 +79,7 @@ mod ovc_tests {
         }
 
         // Read receipts and commit
-        let receipts_json = std::fs::read("receipts_full.json").unwrap();
+        let receipts_json = std::fs::read("src/tests/data/receipts_full.json").unwrap();
         let receipts: Vec<Receipt> = serde_json::from_slice(receipts_json.as_slice()).unwrap();
         let mut hashed_logs_vec = Vec::new();
         for idx in 0..8 {
@@ -103,7 +103,7 @@ mod ovc_tests {
 
     #[test]
     fn test_build_from_receipts() {
-        let receipts_json = std::fs::read("receipts_full.json").unwrap();
+        let receipts_json = std::fs::read("src/tests/data/receipts_full.json").unwrap();
         let receipts: Vec<Receipt> = serde_json::from_slice(receipts_json.as_slice()).unwrap();
         let mut trie = build_from_receipts(receipts);
 
@@ -118,7 +118,7 @@ mod ovc_tests {
 
     #[test]
     fn test_inclusion_proof() {
-        let receipts_json = std::fs::read("receipts_full.json").unwrap();
+        let receipts_json = std::fs::read("src/tests/data/receipts_full.json").unwrap();
         let receipts: Vec<Receipt> = serde_json::from_slice(receipts_json.as_slice()).unwrap();
 
         let mut trie = build_from_receipts(receipts.clone());
@@ -154,7 +154,7 @@ mod ovc_tests {
         }
 
         // Read receipts and build receipt trie
-        let receipts_json = std::fs::read("receipts_full.json").unwrap();
+        let receipts_json = std::fs::read("src/tests/data/receipts_full.json").unwrap();
         let receipts: Vec<Receipt> = serde_json::from_slice(receipts_json.as_slice()).unwrap();
         let mut receipt_trie = build_from_receipts(receipts.clone());
         let receipt_root = receipt_trie.root().unwrap();
