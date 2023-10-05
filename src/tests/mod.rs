@@ -167,13 +167,20 @@ mod ovc_tests {
         receipts_2.extend_from_slice(&receipts[diff_idx + 1..num_receipts + 1]);
         let mut ovc_prover_2 = Prover::new(commit_key.clone(), receipts_2.clone());
 
+        // First check if the commitments provided by the two provers differ
+        let (prover_1_commitment, prover_1_root) = ovc_prover_1.get_commitment_and_root();
+        let (prover_2_commitment, prover_2_root) = ovc_prover_2.get_commitment_and_root();
+        assert_ne!(prover_1_commitment, prover_2_commitment);
+
+        // Initialize referee
         let mut ovc_verifier = Referee {
-            prover_1_root: ovc_prover_1.clone().root,
-            prover_2_root: ovc_prover_2.clone().root,
+            prover_1_root,
+            prover_2_root,
             tree_size: num_receipts,
             commitment_key: commit_key,
         };
 
+        // Run OVC protocol
         let prover_1_response = ovc_prover_1.first_response();
         let prover_2_response = ovc_prover_2.first_response();
         let mut verifier_request =
