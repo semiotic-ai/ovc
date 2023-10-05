@@ -8,6 +8,12 @@ mod ovc_tests {
     use serde_json;
     use std::sync::Arc;
 
+    fn load_receipts() -> Vec<Receipt> {
+        let receipts_json = std::fs::read("src/tests/data/receipts_full.json").unwrap();
+        let receipts: Vec<Receipt> = serde_json::from_slice(receipts_json.as_slice()).unwrap();
+        receipts
+    }
+
     fn build_from_receipts(receipts: Vec<Receipt>) -> PatriciaTrie<MemoryDB, HasherKeccak> {
         let memdb = Arc::new(MemoryDB::new(true));
         let hasher = Arc::new(HasherKeccak::new());
@@ -79,8 +85,7 @@ mod ovc_tests {
         }
 
         // Read receipts and commit
-        let receipts_json = std::fs::read("src/tests/data/receipts_full.json").unwrap();
-        let receipts: Vec<Receipt> = serde_json::from_slice(receipts_json.as_slice()).unwrap();
+        let receipts = load_receipts();
         let mut hashed_logs_vec = Vec::new();
         for idx in 0..8 {
             hashed_logs_vec.push(hash_receipts_vec(&receipts[idx]));
@@ -103,8 +108,7 @@ mod ovc_tests {
 
     #[test]
     fn test_build_from_receipts() {
-        let receipts_json = std::fs::read("src/tests/data/receipts_full.json").unwrap();
-        let receipts: Vec<Receipt> = serde_json::from_slice(receipts_json.as_slice()).unwrap();
+        let receipts = load_receipts();
         let mut trie = build_from_receipts(receipts);
 
         let root = trie.root().unwrap();
@@ -118,8 +122,7 @@ mod ovc_tests {
 
     #[test]
     fn test_inclusion_proof() {
-        let receipts_json = std::fs::read("src/tests/data/receipts_full.json").unwrap();
-        let receipts: Vec<Receipt> = serde_json::from_slice(receipts_json.as_slice()).unwrap();
+        let receipts = load_receipts();
 
         let mut trie = build_from_receipts(receipts.clone());
         let root = trie.root().unwrap();
@@ -154,8 +157,7 @@ mod ovc_tests {
         }
 
         // Read receipts and build receipt trie
-        let receipts_json = std::fs::read("src/tests/data/receipts_full.json").unwrap();
-        let receipts: Vec<Receipt> = serde_json::from_slice(receipts_json.as_slice()).unwrap();
+        let receipts = load_receipts();
         let mut receipt_trie = build_from_receipts(receipts.clone());
         let receipt_root = receipt_trie.root().unwrap();
 
