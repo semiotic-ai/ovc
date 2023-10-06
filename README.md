@@ -4,6 +4,8 @@
 
 This Rust library implements an Optimistically Verifiable Commitment Protocol, providing structures and methods to create commitments using a Merkle tree and subsequently verify them. It primarily consists of a `Prover` that generates a commitment and a `Referee` that interacts with two provers to find disagreements and verify proofs in a dispute protocol.
 
+See [here](https://www.notion.so/semiotic/Optimistically-verifiable-polynomial-commitments-to-indexed-blockchain-data-using-bisection-games-e18df34890b5422b8485c299251bbb09?pvs=4) for more detail about the protocol itself.
+
 ### Key Components
 
 - **Prover**: Generates a commitment to a list of Ethereum receipts, using a commitment key, and builds the Merkle tree to verify that the commitment was created correctly.
