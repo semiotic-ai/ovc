@@ -26,8 +26,11 @@ pub struct Prover {
     disagreement_idx: usize,
 }
 
-/// Response from the prover for one round of interaction in the OVC protocol.
-/// It contains the children of the node requested by the Referee
+/// A struct containing responses from the `Prover` for one round of interaction in the OVC protocol.
+///
+/// # Fields
+/// - `left`: The left child of a Merkle tree node.
+/// - `right`: The right child of a Merkle tree node.
 pub struct StepResponse {
     pub left: Vec<u8>,
     pub right: Vec<u8>,
@@ -40,9 +43,17 @@ pub enum Response {
 }
 
 impl Prover {
-    /// Initializes a Prover instance.
-    /// Requires a commitment key used for committing to the Receipts.
-    /// Commits to the Receipts and builds the Merkle tree for verifying the commitment.
+    /// Constructs a new `Prover`.
+    ///
+    /// Initializes a Prover instance, committing to the Receipts and building the Merkle tree
+    /// required for verifying the commitment.
+    ///
+    /// # Parameters
+    /// - `commit_key`: The commitment key used for committing to the Receipts.
+    /// - `receipts`: A vector of Receipts to which the Prover will commit.
+    ///
+    /// # Returns
+    /// A new `Prover` instance.
     pub fn new(commit_key: Vec<G1Projective>, receipts: Vec<Receipt>) -> Prover {
         let hash_receipts_vec: Vec<Fr> = receipts
             .iter()
@@ -59,12 +70,19 @@ impl Prover {
         }
     }
 
-    /// A getter function to return the commitment to receipts and the Merkle tree root for commitment verification
+    /// Retrieves the commitment to receipts and the Merkle tree root for commitment verification.
+    ///
+    /// # Returns
+    /// A tuple containing the commitment and Merkle tree root.
     pub fn get_commitment_and_root(&self) -> (G1Projective, Vec<u8>) {
         (self.commitment, self.root.clone())
     }
 
-    /// The Provers initial response in the OVC protocol
+    /// Generates the initial response in the OVC protocol by the `Prover`.
+    ///
+    /// # Returns
+    ///
+    /// A `StepResponse` containing the left and right roots of the Merkle subtrees.
     pub fn first_response(&mut self) -> StepResponse {
         let left_leaves = self.left_leaves.clone();
         let right_leaves = self.right_leaves.clone();
@@ -77,7 +95,15 @@ impl Prover {
         }
     }
 
-    /// A single round in the OVC dispute protocol
+    /// Generates a response for a single round in the OVC dispute protocol.
+    ///
+    /// # Arguments
+    ///
+    /// * `open_side` - An `OpenKind` enum specifying which side (left/right) should be opened.
+    ///
+    /// # Returns
+    ///
+    /// A `Response` that can be a `StepResponse` or a `Leaf` depending on the protocol step.
     pub fn find_disagreement_step_response(&mut self, open_side: &OpenKind) -> Response {
         let leaves = match open_side {
             OpenKind::Left => self.left_leaves.clone(),
@@ -146,7 +172,10 @@ pub struct Referee {
     commitment_key: Vec<G1Projective>,
 }
 
-/// The message from the Referee indicating which child to use for the next round of the protocol.
+/// Enum representing the possible opening kinds in a protocol step.
+///
+/// * `Left` indicates that the left child should be opened.
+/// * `Right` indicates that the right child should be opened.
 #[derive(Debug, PartialEq)]
 pub enum OpenKind {
     Left,
@@ -169,9 +198,18 @@ pub struct OpeningProof {
 }
 
 impl OpeningProof {
-    /// Performs the verification of an opening proof. 
-    /// Right now this is specific to performing Merkle inclusion proofs of Receipts in a block header.
-    /// Will need to be updated to support e.g. data indexed using Substreams
+    /// Verifies an opening proof.
+    ///
+    /// # Arguments
+    ///
+    /// * `commitment_key` - The G1Projective commitment key.
+    /// * `commitment_bytes` - The byte representation of the commitment.
+    /// * `disagreement_idx` - The index at which the disagreement occurred.
+    /// * `root_hash` - The root hash of the Merkle tree.
+    ///
+    /// # Returns
+    ///
+    /// A boolean value indicating whether the verification was successful.
     pub fn verify(
         self,
         commitment_key: G1Projective,
@@ -219,8 +257,17 @@ impl OpeningProof {
 }
 
 impl Referee {
-    /// Performs one round of the Referee's role.
-    /// Checks which child nodes the provers disagree on and asks to open the earliest disagreement.
+    /// Determines which child node to use for the next protocol round based on the disagreement
+    /// between prover responses.
+    ///
+    /// # Arguments
+    ///
+    /// * `prover_1_response` - A `StepResponse` from the first prover.
+    /// * `prover_2_response` - A `StepResponse` from the second prover.
+    ///
+    /// # Returns
+    ///
+    /// An `OpenKind` enum indicating whether to open the left or right child in the next round.
     pub fn find_disagreement_step(
         &mut self,
         prover_1_response: StepResponse,
