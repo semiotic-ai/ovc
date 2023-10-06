@@ -6,14 +6,15 @@ This Rust library implements an Optimistically Verifiable Commitment Protocol, p
 
 ### Key Components
 
-- **Prover**: Generates a commitment and Merkle tree using a commitment key and a list of receipts.
+- **Prover**: Generates a commitment to a list of Ethereum receipts, using a commitment key, and builds the Merkle tree to verify that the commitment was created correctly.
 - **Referee**: Interacts with two provers, keeping track of their latest nodes, tree size at a given round, and the commitment key used to commit to Receipts.
 
 ### Functionality
 
-- Creation of commitment and Merkle tree.
+- Creation of commitment to receipts and Merkle tree.
 - Initial response and a single round in the OVC dispute protocol by the prover.
-- Verification of opening proof by both the prover and referee.
+- Computing opening proof at the end OVC protocol by the prover.
+- Verification of opening proof by both the referee.
 
 ## Prerequisites
 
