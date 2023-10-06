@@ -15,6 +15,8 @@ use std::ops::Mul;
 
 mod tests;
 
+/// Prover: This is the Prover in the optimistically verifiable commitment protocol. 
+/// It takes a commitment key and a list of receipts and generates a commitment and a Merkle tree using the incremental steps of the commitment calculation as leaves.
 #[derive(Clone, Debug)]
 pub struct Prover {
     root: Vec<u8>,
@@ -24,17 +26,23 @@ pub struct Prover {
     disagreement_idx: usize,
 }
 
+/// Response from the prover for one round of interaction in the OVC protocol.
+/// It contains the children of the node requested by the Referee
 pub struct StepResponse {
     pub left: Vec<u8>,
     pub right: Vec<u8>,
 }
 
+/// A wrapper for the two types of responses that can be sent by a Prover.
 pub enum Response {
     StepResponse(StepResponse),
     Leaf(Vec<u8>),
 }
 
 impl Prover {
+    /// Initializes a Prover instance.
+    /// Requires a commitment key used for committing to the Receipts.
+    /// Commits to the Receipts and builds the Merkle tree for verifying the commitment.
     pub fn new(commit_key: Vec<G1Projective>, receipts: Vec<Receipt>) -> Prover {
         let hash_receipts_vec: Vec<Fr> = receipts
             .iter()
@@ -51,10 +59,12 @@ impl Prover {
         }
     }
 
+    /// A getter function to return the commitment to receipts and the Merkle tree root for commitment verification
     pub fn get_commitment_and_root(&self) -> (G1Projective, Vec<u8>) {
         (self.commitment, self.root.clone())
     }
 
+    /// The Provers initial response in the OVC protocol
     pub fn first_response(&mut self) -> StepResponse {
         let left_leaves = self.left_leaves.clone();
         let right_leaves = self.right_leaves.clone();
@@ -67,6 +77,7 @@ impl Prover {
         }
     }
 
+    /// A single round in the OVC dispute protocol
     pub fn find_disagreement_step_response(&mut self, open_side: &OpenKind) -> Response {
         let leaves = match open_side {
             OpenKind::Left => self.left_leaves.clone(),
@@ -108,6 +119,8 @@ impl Prover {
         }
     }
 
+    /// The final step in the OVC protocol.
+    /// Reveals the leaf node at the disagreement point and produces a validity proof for that leaf node.
     pub fn compute_opening_proof(
         self,
         receipt_trie: &PatriciaTrie<MemoryDB, HasherKeccak>,
@@ -123,6 +136,8 @@ impl Prover {
     }
 }
 
+/// The Referee in the OVC protocol. 
+/// Interacts with two Provers, keeping track of the latest node for each prover, the tree size at a given round, and the commitment key used to commit to Receipts.
 #[derive(Clone)]
 pub struct Referee {
     prover_1_root: Vec<u8>,
@@ -131,12 +146,14 @@ pub struct Referee {
     commitment_key: Vec<G1Projective>,
 }
 
+/// The message from the Referee indicating which child to use for the next round of the protocol.
 #[derive(Debug, PartialEq)]
 pub enum OpenKind {
     Left,
     Right,
 }
 
+/// A message from the Referee indicating who one the game.
 #[derive(Debug, PartialEq)]
 pub enum Winner {
     Both,
@@ -145,12 +162,16 @@ pub enum Winner {
     Neither,
 }
 
+/// Holds the opening proof revealed by Provers at the end of the protocol.
 pub struct OpeningProof {
     pub receipt: Receipt,
     pub inclusion_proof: Vec<Vec<u8>>,
 }
 
 impl OpeningProof {
+    /// Performs the verification of an opening proof. 
+    /// Right now this is specific to performing Merkle inclusion proofs of Receipts in a block header.
+    /// Will need to be updated to support e.g. data indexed using Substreams
     pub fn verify(
         self,
         commitment_key: G1Projective,
@@ -198,6 +219,8 @@ impl OpeningProof {
 }
 
 impl Referee {
+    /// Performs one round of the Referee's role.
+    /// Checks which child nodes the provers disagree on and asks to open the earliest disagreement.
     pub fn find_disagreement_step(
         &mut self,
         prover_1_response: StepResponse,
@@ -258,6 +281,7 @@ impl Referee {
         }
     }
 
+    /// Verifies the proofs provided by the provers and determines a winner.
     pub fn opening_proof_verify(
         &self,
         disagreement_idx: usize,
