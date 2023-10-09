@@ -54,13 +54,13 @@ impl Prover {
     ///
     /// # Returns
     /// A new `Prover` instance.
-    pub fn new(commit_key: Vec<G1Projective>, receipts: Vec<Receipt>) -> Prover {
-        let hash_receipts_vec: Vec<Fr> = receipts
+    pub fn new(commit_key: Vec<G1Projective>, data_bytes_vec: Vec<Vec<u8>>) -> Prover {
+        let hash_vec: Vec<Fr> = data_bytes_vec
             .iter()
-            .map(|receipt| hash_receipts_vec(receipt))
+            .map(|bytes| hash_vec(bytes.clone()))
             .collect();
 
-        let (commitment, tree, leaves) = commit_and_merkle(commit_key.clone(), hash_receipts_vec);
+        let (commitment, tree, leaves) = commit_and_merkle(commit_key.clone(), hash_vec);
         Prover {
             root: tree.root(),
             left_leaves: leaves[0..leaves.len() / 2].to_vec(),
@@ -218,7 +218,9 @@ impl OpeningProof {
         root_hash: &[u8],
     ) -> bool {
         // Check that receipt opening the commitment is correct
-        let hashed_receipt = hash_receipts_vec(&self.receipt);
+        let mut receipts_bytes = Vec::new();
+        self.receipt.clone().to_compact(&mut receipts_bytes);
+        let hashed_receipt = hash_vec(receipts_bytes);
         let commitment = commitment_key.mul(hashed_receipt);
         let mut serialized_commitment_bytes = Vec::new();
         commitment
@@ -415,9 +417,7 @@ fn commit_and_merkle(
 }
 
 // Compute the hash of a Receipt
-fn hash_receipts_vec(receipt: &Receipt) -> Fr {
-    let mut receipt_bytes = Vec::new();
-    receipt.clone().to_compact(&mut receipt_bytes);
+fn hash_vec(bytes_vec: Vec<u8>) -> Fr {
     let hasher = <DefaultFieldHasher<Sha256> as HashToField<Fr>>::new(&[1]);
-    hasher.hash_to_field(receipt_bytes.as_slice(), 1)[0]
+    hasher.hash_to_field(bytes_vec.as_slice(), 1)[0]
 }
