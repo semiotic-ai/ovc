@@ -1,4 +1,4 @@
-use std::ops::Mul;
+use std::{ops::Mul, sync::Arc};
 
 use ark_bn254::G1Projective;
 use ark_serialize::CanonicalSerialize;
@@ -19,14 +19,32 @@ pub struct ReceiptOpeningProof {
     pub inclusion_proof: Vec<Vec<u8>>,
 }
 
-impl OpeningProof<Receipt, PatriciaTrie<MemoryDB, HasherKeccak>> for ReceiptOpeningProof{
+pub trait ReceiptProver {
+    fn get_idx_in_block(&self, leaves: Vec<Receipt>) -> usize;
+    fn get_proof(&self, leaves: &Vec<Receipt>) -> Vec<Vec<u8>>;
+}
+
+impl ReceiptProver for Receipt {
+    fn get_idx_in_block(&self, leaves: Vec<Receipt>) -> usize {
+        leaves.iter().position(|x| x == self).unwrap()
+    }
+
+    fn get_proof(&self, leaves: &Vec<Receipt>) -> Vec<Vec<u8>> {
+        let mut receipts_trie = build_from_receipts(leaves.clone());
+        let receipt_idx = self.get_idx_in_block(leaves.to_vec());
+        let mut receipt_idx_buf = BytesMut::new();
+        receipt_idx.encode(&mut receipt_idx_buf);
+        let _build_tree = receipts_trie.root();
+        receipts_trie.get_proof(&receipt_idx_buf).unwrap()
+    }
+}
+
+impl OpeningProof<Receipt, Vec<Receipt>> for ReceiptOpeningProof{
     /// Creates a new opening proof.
     /// 
     
-    fn new(receipt: Receipt, receipt_trie: &PatriciaTrie<MemoryDB, HasherKeccak>, disagreement_idx: usize) -> Self {
-        let mut disagreement_idx_buf = BytesMut::new();
-        disagreement_idx.encode(&mut disagreement_idx_buf);
-        let inclusion_proof = receipt_trie.get_proof(&disagreement_idx_buf).unwrap();
+    fn new(receipt: Receipt, witness: &Vec<Receipt>) -> Self {
+        let inclusion_proof = receipt.get_proof(&witness);
         ReceiptOpeningProof {
             receipt,
             inclusion_proof,
@@ -90,4 +108,26 @@ impl OpeningProof<Receipt, PatriciaTrie<MemoryDB, HasherKeccak>> for ReceiptOpen
             None => return false,
         }
     }
+}
+
+/// Builds a Patricia trie from a vector of receipts.
+fn build_from_receipts(receipts: Vec<Receipt>) -> PatriciaTrie<MemoryDB, HasherKeccak> {
+    let memdb = Arc::new(MemoryDB::new(true));
+    let hasher = Arc::new(HasherKeccak::new());
+
+    let mut trie = PatriciaTrie::new(memdb.clone(), hasher.clone());
+    let mut key_buf = BytesMut::new();
+    let mut value_buf = BytesMut::new();
+
+    for (idx, receipt) in receipts.iter().enumerate() {
+        key_buf.clear();
+        idx.encode(&mut key_buf);
+
+        value_buf.clear();
+        let bloom_receipt = ReceiptWithBloomRef::from(receipt);
+        bloom_receipt.encode_inner(&mut value_buf, false);
+        trie.insert(key_buf.to_vec(), value_buf.to_vec()).unwrap();
+    }
+
+    trie
 }

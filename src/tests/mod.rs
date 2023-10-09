@@ -176,7 +176,7 @@ mod ovc_tests {
             receipts[idx].clone().to_compact(&mut receipt_bytes);
             receipts_bytes_vec.push(receipt_bytes);
         }
-        let mut ovc_prover_1 = Prover::<ReceiptOpeningProof, Receipt, PatriciaTrie<MemoryDB, HasherKeccak>>::new(commit_key.clone(), receipts_bytes_vec);
+        let mut ovc_prover_1 = Prover::<ReceiptOpeningProof, Receipt, Vec<Receipt>>::new(commit_key.clone(), receipts_bytes_vec);
 
         // Skip a receipt to simulate a prover who misses a receipt
         let mut receipts_2 = receipts[0..diff_idx].to_vec();
@@ -187,7 +187,7 @@ mod ovc_tests {
             receipts_2[idx].clone().to_compact(&mut receipt_bytes);
             receipts_bytes_vec_2.push(receipt_bytes);
         }
-        let mut ovc_prover_2 = Prover::<ReceiptOpeningProof, Receipt, PatriciaTrie<MemoryDB, HasherKeccak>>::new(commit_key.clone(), receipts_bytes_vec_2);
+        let mut ovc_prover_2 = Prover::<ReceiptOpeningProof, Receipt, Vec<Receipt>>::new(commit_key.clone(), receipts_bytes_vec_2);
 
         // First check if the commitments provided by the two provers differ
         let (prover_1_commitment, prover_1_root) = ovc_prover_1.get_commitment_and_root();
@@ -195,7 +195,7 @@ mod ovc_tests {
         assert_ne!(prover_1_commitment, prover_2_commitment);
 
         // Initialize referee
-        let mut ovc_verifier:Referee<ReceiptOpeningProof, Receipt, PatriciaTrie<MemoryDB, HasherKeccak>>  = Referee::new(prover_1_root, prover_2_root, num_receipts, commit_key);
+        let mut ovc_verifier:Referee<ReceiptOpeningProof, Receipt, Vec<Receipt>>  = Referee::new(prover_1_root, prover_2_root, num_receipts, commit_key);
 
         // Run OVC protocol
         let prover_1_response = ovc_prover_1.first_response();
@@ -219,9 +219,9 @@ mod ovc_tests {
                     diff_idx.encode(&mut diff_idx_bytes);
 
                     let proof_1 = ovc_prover_1
-                        .compute_opening_proof(&receipt_trie, receipts[diff_idx].clone());
+                        .compute_opening_proof(&receipts, receipts[diff_idx].clone());
                     let proof_2 = ovc_prover_2
-                        .compute_opening_proof(&receipt_trie, receipts_2[diff_idx].clone());
+                        .compute_opening_proof(&receipts, receipts_2[diff_idx].clone());
                     assert_eq!(
                         ovc_verifier.opening_proof_verify(
                             diff_idx,

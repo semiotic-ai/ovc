@@ -14,7 +14,7 @@ pub mod receipts_proof;
 /// Prover: This is the Prover in the optimistically verifiable commitment protocol. 
 /// It takes a commitment key and a list of receipts and generates a commitment and a Merkle tree using the incremental steps of the commitment calculation as leaves.
 #[derive(Clone, Debug)]
-pub struct Prover<P, T, S> {
+pub struct Prover<P, T, W> {
     root: Vec<u8>,
     left_leaves: Vec<Vec<u8>>,
     right_leaves: Vec<Vec<u8>>,
@@ -22,7 +22,7 @@ pub struct Prover<P, T, S> {
     disagreement_idx: usize,
     _phantom: std::marker::PhantomData<P>,
     _phantom2: std::marker::PhantomData<T>,
-    _phantom3: std::marker::PhantomData<S>,
+    _phantom3: std::marker::PhantomData<W>,
 }
 
 /// A struct containing responses from the `Prover` for one round of interaction in the OVC protocol.
@@ -41,7 +41,7 @@ pub enum Response {
     Leaf(Vec<u8>),
 }
 
-impl <P: OpeningProof<T, S>, T, S> Prover<P, T, S> {
+impl <P: OpeningProof<T, W>, T, W> Prover<P, T, W> {
     /// Constructs a new `Prover`.
     ///
     /// Initializes a Prover instance, committing to the Receipts and building the Merkle tree
@@ -53,7 +53,7 @@ impl <P: OpeningProof<T, S>, T, S> Prover<P, T, S> {
     ///
     /// # Returns
     /// A new `Prover` instance.
-    pub fn new(commit_key: Vec<G1Projective>, data_bytes_vec: Vec<Vec<u8>>) -> Prover<P, T, S> {
+    pub fn new(commit_key: Vec<G1Projective>, data_bytes_vec: Vec<Vec<u8>>) -> Prover<P, T, W> {
         let hash_vec: Vec<Fr> = data_bytes_vec
             .iter()
             .map(|bytes| hash_vec(bytes.clone()))
@@ -155,10 +155,10 @@ impl <P: OpeningProof<T, S>, T, S> Prover<P, T, S> {
     /// Reveals the leaf node at the disagreement point and produces a validity proof for that leaf node.
     pub fn compute_opening_proof (
         &self,
-        proving_system: &S,
-        receipt: T,
+        witness: &W,
+        input_data: T,
     ) -> P {
-        P::new(receipt, proving_system, self.disagreement_idx)
+        P::new(input_data, witness)
     }
 }
 
@@ -194,8 +194,8 @@ pub enum Winner {
     Neither,
 }
 
-pub trait OpeningProof<T, S> {
-    fn new(data_vec: T, proving_system: &S, disagreement_idx: usize) -> Self;
+pub trait OpeningProof<T, W> {
+    fn new(input_data: T, witness: &W) -> Self;
 
     fn verify(
         self,
