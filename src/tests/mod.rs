@@ -5,7 +5,6 @@ mod ovc_tests {
     use ark_bn254::G1Projective as G;
     use ark_ec::{CurveGroup, VariableBaseMSM};
     use ark_std::UniformRand;
-    use serde_json;
     use std::sync::Arc;
 
     fn load_receipts() -> Vec<Receipt> {
@@ -87,8 +86,8 @@ mod ovc_tests {
         // Read receipts and commit
         let receipts = load_receipts();
         let mut hashed_logs_vec = Vec::new();
-        for idx in 0..8 {
-            hashed_logs_vec.push(hash_receipts_vec(&receipts[idx]));
+        for receipt in receipts.iter().take(8) {
+            hashed_logs_vec.push(hash_receipts_vec(receipt));
         }
 
         // Compute Merkle tree

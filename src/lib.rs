@@ -57,7 +57,7 @@ impl Prover {
     pub fn new(commit_key: Vec<G1Projective>, receipts: Vec<Receipt>) -> Prover {
         let hash_receipts_vec: Vec<Fr> = receipts
             .iter()
-            .map(|receipt| hash_receipts_vec(receipt))
+            .map(hash_receipts_vec)
             .collect();
 
         let (commitment, tree, leaves) = commit_and_merkle(commit_key.clone(), hash_receipts_vec);
@@ -129,10 +129,10 @@ impl Prover {
                 <LeafH as CRHScheme>::evaluate(&(), right_leaves[0].clone()).unwrap();
             self.left_leaves = left_leaves;
             self.right_leaves = right_leaves;
-            return Response::StepResponse(StepResponse {
+            Response::StepResponse(StepResponse {
                 left: left_leaf_hash,
                 right: right_leaf_hash,
-            });
+            })
         } else {
             let left_tree = Sha256MerkleTree::new(&(), &(), left_leaves.clone()).unwrap();
             let right_tree = Sha256MerkleTree::new(&(), &(), right_leaves.clone()).unwrap();
@@ -234,7 +234,7 @@ impl OpeningProof {
         disagreement_idx.encode(&mut disagreement_idx_buf);
         let hasher = HasherKeccak::new();
         let proof = verify_proof(
-            &root_hash,
+            root_hash,
             &disagreement_idx_buf,
             self.inclusion_proof,
             hasher,
@@ -250,8 +250,8 @@ impl OpeningProof {
         let mut value_buf = BytesMut::new();
         bloom_receipt.encode_inner(&mut value_buf, false);
         match valid_proof {
-            Some(leaf_bytes) => return value_buf == leaf_bytes,
-            None => return false,
+            Some(leaf_bytes) => value_buf == leaf_bytes,
+            None => false,
         }
     }
 }
@@ -318,13 +318,13 @@ impl Referee {
         if prover_1_l_child != prover_2_l_child {
             self.prover_1_root = prover_1_l_child;
             self.prover_2_root = prover_2_l_child;
-            self.tree_size = self.tree_size / 2;
-            return OpenKind::Left;
+            self.tree_size /= 2;
+            OpenKind::Left
         } else {
             self.prover_1_root = prover_1_r_child;
             self.prover_2_root = prover_2_r_child;
-            self.tree_size = self.tree_size / 2;
-            return OpenKind::Right;
+            self.tree_size /= 2;
+            OpenKind::Right
         }
     }
 
@@ -354,7 +354,7 @@ impl Referee {
 
         if prover_1_passed && prover_2_passed {
             // TODO: Add logic to determine which receipt is earlier.
-            return Winner::Both;
+            Winner::Both
         } else if prover_1_passed && !prover_2_passed {
             return Winner::Prover1;
         } else if !prover_1_passed && prover_2_passed {
