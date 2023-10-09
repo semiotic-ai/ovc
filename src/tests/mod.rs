@@ -88,7 +88,9 @@ mod ovc_tests {
         let receipts = load_receipts();
         let mut hashed_logs_vec = Vec::new();
         for idx in 0..8 {
-            hashed_logs_vec.push(hash_receipts_vec(&receipts[idx]));
+            let mut receipt_bytes = Vec::new();
+            receipts[idx].clone().to_compact(&mut receipt_bytes);
+            hashed_logs_vec.push(hash_vec(receipt_bytes));
         }
 
         // Compute Merkle tree
@@ -162,12 +164,24 @@ mod ovc_tests {
         let receipt_root = receipt_trie.root().unwrap();
 
         // Run OVC protocol
-        let mut ovc_prover_1 = Prover::new(commit_key.clone(), receipts[0..num_receipts].to_vec());
+        let mut receipts_bytes_vec = Vec::new();
+        for idx in 0..num_receipts {
+            let mut receipt_bytes = Vec::new();
+            receipts[idx].clone().to_compact(&mut receipt_bytes);
+            receipts_bytes_vec.push(receipt_bytes);
+        }
+        let mut ovc_prover_1 = Prover::new(commit_key.clone(), receipts_bytes_vec);
 
         // Skip a receipt to simulate a prover who misses a receipt
         let mut receipts_2 = receipts[0..diff_idx].to_vec();
         receipts_2.extend_from_slice(&receipts[diff_idx + 1..num_receipts + 1]);
-        let mut ovc_prover_2 = Prover::new(commit_key.clone(), receipts_2.clone());
+        let mut receipts_bytes_vec_2 = Vec::new();
+        for idx in 0..num_receipts {
+            let mut receipt_bytes = Vec::new();
+            receipts_2[idx].clone().to_compact(&mut receipt_bytes);
+            receipts_bytes_vec_2.push(receipt_bytes);
+        }
+        let mut ovc_prover_2 = Prover::new(commit_key.clone(), receipts_bytes_vec_2);
 
         // First check if the commitments provided by the two provers differ
         let (prover_1_commitment, prover_1_root) = ovc_prover_1.get_commitment_and_root();
