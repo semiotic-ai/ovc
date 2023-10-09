@@ -18,12 +18,14 @@ mod tests;
 /// Prover: This is the Prover in the optimistically verifiable commitment protocol. 
 /// It takes a commitment key and a list of receipts and generates a commitment and a Merkle tree using the incremental steps of the commitment calculation as leaves.
 #[derive(Clone, Debug)]
-pub struct Prover {
+pub struct Prover<P, T> {
     root: Vec<u8>,
     left_leaves: Vec<Vec<u8>>,
     right_leaves: Vec<Vec<u8>>,
     commitment: G1Projective,
     disagreement_idx: usize,
+    _phantom: std::marker::PhantomData<P>,
+    _phantom2: std::marker::PhantomData<T>,
 }
 
 /// A struct containing responses from the `Prover` for one round of interaction in the OVC protocol.
@@ -42,7 +44,7 @@ pub enum Response {
     Leaf(Vec<u8>),
 }
 
-impl Prover {
+impl <P: OpeningProof<T>, T> Prover<P, T> {
     /// Constructs a new `Prover`.
     ///
     /// Initializes a Prover instance, committing to the Receipts and building the Merkle tree
@@ -54,7 +56,7 @@ impl Prover {
     ///
     /// # Returns
     /// A new `Prover` instance.
-    pub fn new(commit_key: Vec<G1Projective>, data_bytes_vec: Vec<Vec<u8>>) -> Prover {
+    pub fn new(commit_key: Vec<G1Projective>, data_bytes_vec: Vec<Vec<u8>>) -> Prover<P, T> {
         let hash_vec: Vec<Fr> = data_bytes_vec
             .iter()
             .map(|bytes| hash_vec(bytes.clone()))
@@ -67,6 +69,8 @@ impl Prover {
             right_leaves: leaves[leaves.len() / 2..leaves.len()].to_vec(),
             commitment,
             disagreement_idx: 0,
+            _phantom: std::marker::PhantomData,
+            _phantom2: std::marker::PhantomData,
         }
     }
 
@@ -147,29 +151,28 @@ impl Prover {
 
     /// The final step in the OVC protocol.
     /// Reveals the leaf node at the disagreement point and produces a validity proof for that leaf node.
-    pub fn compute_opening_proof(
+    pub fn compute_opening_proof (
         self,
         receipt_trie: &PatriciaTrie<MemoryDB, HasherKeccak>,
-        receipt: Receipt,
-    ) -> OpeningProof {
+        receipt: T,
+    ) -> P {
         let mut disagreement_idx_buf = BytesMut::new();
         self.disagreement_idx.encode(&mut disagreement_idx_buf);
         let inclusion_proof = receipt_trie.get_proof(&disagreement_idx_buf).unwrap();
-        OpeningProof {
-            receipt,
-            inclusion_proof,
-        }
+        P::new(receipt, inclusion_proof)
     }
 }
 
 /// The Referee in the OVC protocol. 
 /// Interacts with two Provers, keeping track of the latest node for each prover, the tree size at a given round, and the commitment key used to commit to Receipts.
 #[derive(Clone)]
-pub struct Referee {
+pub struct Referee<P, T> {
     prover_1_root: Vec<u8>,
     prover_2_root: Vec<u8>,
     tree_size: usize,
     commitment_key: Vec<G1Projective>,
+    _phantom: std::marker::PhantomData<P>,
+    _phantom2: std::marker::PhantomData<T>,
 }
 
 /// Enum representing the possible opening kinds in a protocol step.
@@ -191,13 +194,34 @@ pub enum Winner {
     Neither,
 }
 
+pub trait OpeningProof<T> {
+    fn new(data_vec: T, inclusion_proof: Vec<Vec<u8>>) -> Self;
+
+    fn verify(
+        self,
+        commitment_key: G1Projective,
+        commitment_bytes: &Vec<u8>,
+        disagreement_idx: usize,
+        root_hash: &[u8],
+    ) -> bool;
+}
 /// Holds the opening proof revealed by Provers at the end of the protocol.
-pub struct OpeningProof {
+#[derive(Clone)]
+pub struct ReceiptOpeningProof {
     pub receipt: Receipt,
     pub inclusion_proof: Vec<Vec<u8>>,
 }
 
-impl OpeningProof {
+impl OpeningProof<Receipt> for ReceiptOpeningProof{
+    /// Creates a new opening proof.
+    /// 
+    
+    fn new(receipt: Receipt, inclusion_proof: Vec<Vec<u8>>) -> Self {
+        ReceiptOpeningProof {
+            receipt,
+            inclusion_proof,
+        }
+    }
     /// Verifies an opening proof.
     ///
     /// # Arguments
@@ -210,7 +234,7 @@ impl OpeningProof {
     /// # Returns
     ///
     /// A boolean value indicating whether the verification was successful.
-    pub fn verify(
+    fn verify(
         self,
         commitment_key: G1Projective,
         commitment_bytes: &Vec<u8>,
@@ -258,7 +282,20 @@ impl OpeningProof {
     }
 }
 
-impl Referee {
+impl <P: OpeningProof<T>, T> Referee<P, T> {
+
+    /// Creates a new Referee.
+    /// 
+    pub fn new(prover_1_root: Vec<u8>, prover_2_root: Vec<u8>, tree_size: usize, commitment_key: Vec<G1Projective>) -> Self {
+        Referee {
+            prover_1_root,
+            prover_2_root,
+            tree_size,
+            commitment_key,
+            _phantom: std::marker::PhantomData,
+            _phantom2: std::marker::PhantomData,
+        }
+    }
     /// Determines which child node to use for the next protocol round based on the disagreement
     /// between prover responses.
     ///
@@ -334,10 +371,10 @@ impl Referee {
     pub fn opening_proof_verify(
         &self,
         disagreement_idx: usize,
-        proof_1: OpeningProof,
+        proof_1: P,
         root_1_hash: <CompressH as TwoToOneCRHScheme>::Output,
         serialized_commitment_1: Vec<u8>,
-        proof_2: OpeningProof,
+        proof_2: P,
         root_2_hash: <CompressH as TwoToOneCRHScheme>::Output,
         serialized_commitment_2: Vec<u8>,
     ) -> Winner {

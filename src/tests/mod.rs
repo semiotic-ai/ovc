@@ -170,7 +170,7 @@ mod ovc_tests {
             receipts[idx].clone().to_compact(&mut receipt_bytes);
             receipts_bytes_vec.push(receipt_bytes);
         }
-        let mut ovc_prover_1 = Prover::new(commit_key.clone(), receipts_bytes_vec);
+        let mut ovc_prover_1 = Prover::<ReceiptOpeningProof, Receipt>::new(commit_key.clone(), receipts_bytes_vec);
 
         // Skip a receipt to simulate a prover who misses a receipt
         let mut receipts_2 = receipts[0..diff_idx].to_vec();
@@ -189,12 +189,7 @@ mod ovc_tests {
         assert_ne!(prover_1_commitment, prover_2_commitment);
 
         // Initialize referee
-        let mut ovc_verifier = Referee {
-            prover_1_root,
-            prover_2_root,
-            tree_size: num_receipts,
-            commitment_key: commit_key,
-        };
+        let mut ovc_verifier:Referee<ReceiptOpeningProof, Receipt>  = Referee::new(prover_1_root, prover_2_root, num_receipts, commit_key);
 
         // Run OVC protocol
         let prover_1_response = ovc_prover_1.first_response();
