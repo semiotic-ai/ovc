@@ -21,6 +21,7 @@ revm-primitives = "=1.1.2"
 anyhow = "1.0.75"
 alloy-sol-macro = "0.4.2"
 alloy-sol-types = "0.4.2"
+serde_json = "1.0.107"
 
 
 [dev-dependencies]

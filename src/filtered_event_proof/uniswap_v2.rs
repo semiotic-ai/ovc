@@ -2,6 +2,7 @@ use alloy_sol_macro::sol;
 use alloy_sol_types::SolEvent;
 use reth_primitives::Receipt;
 use serde::{Deserialize, Serialize};
+use serde_json;
 
 use self::UniswapV2Swap::Swap;
 
@@ -20,7 +21,7 @@ sol! {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct UniswapV2Event {
     amount0in: String,
     amount0out: String,
@@ -88,5 +89,13 @@ impl Event for UniswapV2Event {
             }
         }
         false
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        serde_json::to_vec(&self).unwrap()
+    }
+
+    fn from_bytes(ser: &[u8]) -> Self {
+        serde_json::from_slice(ser).unwrap()
     }
 }

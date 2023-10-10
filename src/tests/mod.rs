@@ -15,6 +15,7 @@ mod ovc_tests {
     use reth_primitives::{Receipt, ReceiptWithBloomRef};
     use reth_rlp::Encodable;
     use revm_primitives::bytes::BytesMut;
+    use serde::Serialize;
     use serde_json;
     use std::sync::Arc;
 
@@ -274,5 +275,24 @@ mod ovc_tests {
             .filter(|x| *x)
             .count();
         assert_eq!(num_events_in_block, 1);
+    }
+
+    #[test]
+    fn test_event_to_bytes() {
+        let swap = UniswapV2Event::new(
+            "1487592416523998074".to_owned(),
+            "0".to_owned(),
+            "0".to_owned(),
+            "71530900099000000000000000000".to_owned(),
+            "0".to_owned(),
+            "0".to_owned(),
+            "0".to_owned(),
+            "0".to_owned(),
+            "0".to_owned(),
+            "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D".to_owned(),
+            "0x40fbA1C5aFB5c03E80C2CA2C07c38B5bD9d4d150".to_owned(),
+        );
+
+        assert_eq!(UniswapV2Event::from_bytes(&swap.to_bytes()), swap);
     }
 }
