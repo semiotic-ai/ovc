@@ -10,6 +10,7 @@ use std::ops::Mul;
 
 mod tests;
 pub mod receipts_proof;
+pub mod filtered_event_proof;
 
 /// Prover: This is the Prover in the optimistically verifiable commitment protocol. 
 /// It takes a commitment key and a list of receipts and generates a commitment and a Merkle tree using the incremental steps of the commitment calculation as leaves.
