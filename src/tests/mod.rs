@@ -1,19 +1,22 @@
 // Test module for OVC
 #[cfg(test)]
 mod ovc_tests {
-    use crate::{*, receipts_proof::ReceiptOpeningProof, filtered_event_proof::{uniswap_v2::{UniswapV2Event, UniswapV2Swap}, Event}};
+    use crate::{
+        filtered_event_proof::{uniswap_v2::UniswapV2Event, Event},
+        receipts_proof::ReceiptOpeningProof,
+        *,
+    };
     use ark_bn254::G1Projective as G;
     use ark_ec::{CurveGroup, VariableBaseMSM};
     use ark_std::UniformRand;
-    use cita_trie::{PatriciaTrie, MemoryDB, Trie};
-    use csv;
+    use cita_trie::{MemoryDB, PatriciaTrie, Trie};
     use hasher::HasherKeccak;
     use reth_codecs::Compact;
     use reth_primitives::{Receipt, ReceiptWithBloomRef};
     use reth_rlp::Encodable;
     use revm_primitives::bytes::BytesMut;
     use serde_json;
-    use std::{sync::Arc, error::Error, io};
+    use std::sync::Arc;
 
     fn load_receipts() -> Vec<Receipt> {
         let receipts_json = std::fs::read("src/tests/data/receipts_full.json").unwrap();
@@ -40,20 +43,6 @@ mod ovc_tests {
         }
 
         trie
-    }
-
-
-    fn read_events() -> Result<Vec<UniswapV2Event>, Box<dyn Error>> {
-        let mut rdr = csv::Reader::from_reader(io::stdin());
-        let mut event_vec = Vec::new();
-        for result in rdr.deserialize() {
-            // Notice that we need to provide a type hint for automatic
-            // deserialization.
-            let event: UniswapV2Event = result?;
-            event_vec.push(event);
-        }
-
-        Ok(event_vec)
     }
 
     // Test commit_unrolled
@@ -191,7 +180,10 @@ mod ovc_tests {
             receipts[idx].clone().to_compact(&mut receipt_bytes);
             receipts_bytes_vec.push(receipt_bytes);
         }
-        let mut ovc_prover_1 = Prover::<ReceiptOpeningProof, Receipt, Vec<Receipt>>::new(commit_key.clone(), receipts_bytes_vec);
+        let mut ovc_prover_1 = Prover::<ReceiptOpeningProof, Receipt, Vec<Receipt>>::new(
+            commit_key.clone(),
+            receipts_bytes_vec,
+        );
 
         // Skip a receipt to simulate a prover who misses a receipt
         let mut receipts_2 = receipts[0..diff_idx].to_vec();
@@ -202,7 +194,10 @@ mod ovc_tests {
             receipts_2[idx].clone().to_compact(&mut receipt_bytes);
             receipts_bytes_vec_2.push(receipt_bytes);
         }
-        let mut ovc_prover_2 = Prover::<ReceiptOpeningProof, Receipt, Vec<Receipt>>::new(commit_key.clone(), receipts_bytes_vec_2);
+        let mut ovc_prover_2 = Prover::<ReceiptOpeningProof, Receipt, Vec<Receipt>>::new(
+            commit_key.clone(),
+            receipts_bytes_vec_2,
+        );
 
         // First check if the commitments provided by the two provers differ
         let (prover_1_commitment, prover_1_root) = ovc_prover_1.get_commitment_and_root();
@@ -210,7 +205,8 @@ mod ovc_tests {
         assert_ne!(prover_1_commitment, prover_2_commitment);
 
         // Initialize referee
-        let mut ovc_verifier:Referee<ReceiptOpeningProof, Receipt, Vec<Receipt>>  = Referee::new(prover_1_root, prover_2_root, num_receipts, commit_key);
+        let mut ovc_verifier: Referee<ReceiptOpeningProof, Receipt, Vec<Receipt>> =
+            Referee::new(prover_1_root, prover_2_root, num_receipts, commit_key);
 
         // Run OVC protocol
         let prover_1_response = ovc_prover_1.first_response();
@@ -233,10 +229,10 @@ mod ovc_tests {
                     let mut diff_idx_bytes = BytesMut::new();
                     diff_idx.encode(&mut diff_idx_bytes);
 
-                    let proof_1 = ovc_prover_1
-                        .compute_opening_proof(&receipts, receipts[diff_idx].clone());
-                    let proof_2 = ovc_prover_2
-                        .compute_opening_proof(&receipts, receipts_2[diff_idx].clone());
+                    let proof_1 =
+                        ovc_prover_1.compute_opening_proof(&receipts, receipts[diff_idx].clone());
+                    let proof_2 =
+                        ovc_prover_2.compute_opening_proof(&receipts, receipts_2[diff_idx].clone());
                     assert_eq!(
                         ovc_verifier.opening_proof_verify(
                             diff_idx,
@@ -259,21 +255,24 @@ mod ovc_tests {
     fn test_is_event_in_receipt() {
         let receipts = load_receipts();
         let swap = UniswapV2Event::new(
-                "1487592416523998074".to_owned(),
-                "0".to_owned(),
-                "0".to_owned(),
-                "71530900099000000000000000000".to_owned(),
-                "0".to_owned(),
-                "0".to_owned(),
-                "0".to_owned(),
-                "0".to_owned(),
-                "0".to_owned(),
-                "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D".to_owned(),
-                "0x40fbA1C5aFB5c03E80C2CA2C07c38B5bD9d4d150".to_owned(),
-            );
+            "1487592416523998074".to_owned(),
+            "0".to_owned(),
+            "0".to_owned(),
+            "71530900099000000000000000000".to_owned(),
+            "0".to_owned(),
+            "0".to_owned(),
+            "0".to_owned(),
+            "0".to_owned(),
+            "0".to_owned(),
+            "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D".to_owned(),
+            "0x40fbA1C5aFB5c03E80C2CA2C07c38B5bD9d4d150".to_owned(),
+        );
 
-        let num_events_in_block = receipts.iter().map(|r| swap.is_event_in_receipt(r)).filter(|x| *x).count();
+        let num_events_in_block = receipts
+            .iter()
+            .map(|r| swap.is_event_in_receipt(r))
+            .filter(|x| *x)
+            .count();
         assert_eq!(num_events_in_block, 1);
-        
     }
 }

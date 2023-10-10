@@ -8,11 +8,11 @@ use ark_ff::fields::field_hashers::{DefaultFieldHasher, HashToField};
 use ark_serialize::CanonicalSerialize;
 use std::ops::Mul;
 
-mod tests;
-pub mod receipts_proof;
 pub mod filtered_event_proof;
+pub mod receipts_proof;
+mod tests;
 
-/// Prover: This is the Prover in the optimistically verifiable commitment protocol. 
+/// Prover: This is the Prover in the optimistically verifiable commitment protocol.
 /// It takes a commitment key and a list of receipts and generates a commitment and a Merkle tree using the incremental steps of the commitment calculation as leaves.
 #[derive(Clone, Debug)]
 pub struct Prover<P, T, W> {
@@ -42,7 +42,7 @@ pub enum Response {
     Leaf(Vec<u8>),
 }
 
-impl <P: OpeningProof<T, W>, T, W> Prover<P, T, W> {
+impl<P: OpeningProof<T, W>, T, W> Prover<P, T, W> {
     /// Constructs a new `Prover`.
     ///
     /// Initializes a Prover instance, committing to the Receipts and building the Merkle tree
@@ -154,16 +154,12 @@ impl <P: OpeningProof<T, W>, T, W> Prover<P, T, W> {
 
     /// The final step in the OVC protocol.
     /// Reveals the leaf node at the disagreement point and produces a validity proof for that leaf node.
-    pub fn compute_opening_proof (
-        &self,
-        witness: &W,
-        input_data: T,
-    ) -> P {
+    pub fn compute_opening_proof(&self, witness: &W, input_data: T) -> P {
         P::new(input_data, witness)
     }
 }
 
-/// The Referee in the OVC protocol. 
+/// The Referee in the OVC protocol.
 /// Interacts with two Provers, keeping track of the latest node for each prover, the tree size at a given round, and the commitment key used to commit to Receipts.
 #[derive(Clone)]
 pub struct Referee<P, T, S> {
@@ -207,11 +203,15 @@ pub trait OpeningProof<T, W> {
     ) -> bool;
 }
 
-impl <P: OpeningProof<T, S>, T, S> Referee<P, T, S> {
-
+impl<P: OpeningProof<T, S>, T, S> Referee<P, T, S> {
     /// Creates a new Referee.
-    /// 
-    pub fn new(prover_1_root: Vec<u8>, prover_2_root: Vec<u8>, tree_size: usize, commitment_key: Vec<G1Projective>) -> Self {
+    ///
+    pub fn new(
+        prover_1_root: Vec<u8>,
+        prover_2_root: Vec<u8>,
+        tree_size: usize,
+        commitment_key: Vec<G1Projective>,
+    ) -> Self {
         Referee {
             prover_1_root,
             prover_2_root,

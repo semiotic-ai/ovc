@@ -2,15 +2,14 @@ use std::{ops::Mul, sync::Arc};
 
 use ark_bn254::G1Projective;
 use ark_serialize::CanonicalSerialize;
-use cita_trie::{verify_proof, PatriciaTrie, MemoryDB, Trie};
+use cita_trie::{verify_proof, MemoryDB, PatriciaTrie, Trie};
 use hasher::HasherKeccak;
 use reth_codecs::Compact;
 use reth_primitives::{Receipt, ReceiptWithBloomRef};
 use reth_rlp::Encodable;
 use revm_primitives::bytes::BytesMut;
 
-use crate::{OpeningProof, hash_vec};
-
+use crate::{hash_vec, OpeningProof};
 
 /// Holds the opening proof revealed by Provers at the end of the protocol.
 #[derive(Clone)]
@@ -39,10 +38,10 @@ impl ReceiptProver for Receipt {
     }
 }
 
-impl OpeningProof<Receipt, Vec<Receipt>> for ReceiptOpeningProof{
+impl OpeningProof<Receipt, Vec<Receipt>> for ReceiptOpeningProof {
     /// Creates a new opening proof.
-    /// 
-    
+    ///
+
     fn new(receipt: Receipt, witness: &Vec<Receipt>) -> Self {
         let inclusion_proof = receipt.get_proof(&witness);
         ReceiptOpeningProof {
