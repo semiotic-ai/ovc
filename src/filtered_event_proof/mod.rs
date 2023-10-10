@@ -14,6 +14,8 @@ pub mod uniswap_v2;
 
 pub trait Event {
     fn is_event_in_receipt(&self, receipt: &Receipt) -> bool;
+    fn to_bytes(&self) -> Vec<u8>;
+    fn from_bytes(bytes: &[u8]) -> Self;
 }
 
 pub struct EventReceipt<E: Event> {
