@@ -6,6 +6,8 @@ This Rust library implements an Optimistically Verifiable Commitment Protocol, p
 
 See [here](https://www.notion.so/semiotic/Optimistically-verifiable-polynomial-commitments-to-indexed-blockchain-data-using-bisection-games-e18df34890b5422b8485c299251bbb09?pvs=4) for more detail about the protocol itself.
 
+**CAVEAT** This code has not been security reviewed.
+
 ### Key Components
 
 - **Prover**: Generates a commitment to a list of Ethereum receipts, using a commitment key, and builds the Merkle tree to verify that the commitment was created correctly.
