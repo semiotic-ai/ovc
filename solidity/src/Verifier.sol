@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "openzeppelin-solidity/contracts/utils/cryptography/MerkleProof.sol";
-import "./utils/Pairing.sol"; // BN254 curve pairing (import your BN254 library here)
+import "@openzeppelin/utils/cryptography/MerkleProof.sol";
+import "../utils/Pairing.sol"; // BN254 curve pairing (import your BN254 library here)
 
 contract ProverVerifier {
     struct Prover {
