@@ -1,1 +1,2 @@
+contracts=solidity/src/
 @openzeppelin=solidity/lib/openzeppelin-contracts/contracts/
