@@ -1,18 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./utils/Pairing.sol";
-import "./utils/MerkleProof.sol";
-import "./utils/PatriciaTree.sol";
+import {Pairing} from "./utils/Pairing.sol";
+import {PatriciaTrie, PatriciaTrieLib} from "./lib/PatriciaTrie.sol";
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {Receipt, TxType, Log} from "./lib/Receipt.sol";
 
-contract ReceiptProof {
+library ReceiptProof {
     using Pairing for Pairing.G1Point;
-
-    struct Receipt {
-        // Define the structure of your Receipt here
-        // This is a placeholder and should be replaced with later implementation
-        bytes data;
-    }
+    using PatriciaTrieLib for PatriciaTrie;
 
     struct ReceiptOpeningProof {
         Receipt receipt;
@@ -29,9 +25,10 @@ contract ReceiptProof {
     }
 
     function getProof(Receipt memory receipt, Receipt[] memory leaves) public view returns (bytes32[] memory) {
-        PatriciaTree.Tree memory tree = buildFromReceipts(leaves);
+        PatriciaTrie storage trie;
+        trie = PatriciaTrieLib.buildFromReceipts(leaves);
         uint256 receiptIdx = getIdxInBlock(receipt, leaves);
-        return tree.getProof(abi.encode(receiptIdx));
+        return ReceiptProof.getProof(trie, abi.encode(receiptIdx));
     }
 
     function newOpeningProof(Receipt memory receipt, Receipt[] memory witness)
@@ -73,16 +70,6 @@ contract ReceiptProof {
         bytes32 leafBytes = self.inclusionProof[self.inclusionProof.length - 1];
 
         return keccak256(encodedReceipt) == leafBytes;
-    }
-
-    function buildFromReceipts(Receipt[] memory receipts) internal pure returns (PatriciaTree.Tree memory) {
-        PatriciaTree.Tree memory tree;
-        for (uint256 i = 0; i < receipts.length; i++) {
-            bytes memory key = abi.encode(i);
-            bytes memory value = encodeReceiptWithBloom(receipts[i]);
-            PatriciaTree.insert(tree, key, value);
-        }
-        return tree;
     }
 
     // Helper functions

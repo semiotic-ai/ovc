@@ -1,22 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "../src/lib/UniswapV2.sol";
-// import "../src/RethPrimitives.sol";
-// import "../src/PatriciaTrie.sol";
+import {Receipt} from "../src/lib/Receipt.sol";
+import {Pairing} from "../src/utils/Pairing.sol";
+import {MerkleTreeLib} from "../src/lib/MerkleTreeLib.sol";
 
 contract OVCTests {
-    using RethPrimitives for RethPrimitives.Receipt;
-
-    OVC public ovc;
-    UniswapV2Event public uniswapV2Event;
-    PatriciaTrie public patriciaTrie;
-
-    constructor() {
-        ovc = new OVC();
-        uniswapV2Event = new UniswapV2Event();
-        patriciaTrie = new PatriciaTrie();
-    }
+    constructor() {}
 
     function testCommitUnrolled() public {
         // Generate random vector of G1Projective and Fr
@@ -30,7 +20,7 @@ contract OVCTests {
 
         // Compute unrolled commitment
         (Pairing.G1Point[] memory unrolledCommitment, Pairing.G1Point memory commitment) =
-            ovc.commitUnrolled(commitKey, hashedLogsVec);
+            MerkleTreeLib.commitUnrolled(commitKey, hashedLogsVec);
 
         // Check length of unrolled commitment
         require(unrolledCommitment.length == 10, "Incorrect unrolled commitment length");
@@ -52,16 +42,16 @@ contract OVCTests {
         }
 
         // Read receipts and commit
-        RethPrimitives.Receipt[] memory receipts = loadReceipts();
+        Receipt[] memory receipts = loadReceipts();
         uint256[] memory hashedLogsVec = new uint256[](8);
         for (uint256 i = 0; i < 8; i++) {
-            bytes memory receiptBytes = RethPrimitives.encodeReceipt(receipts[i]);
+            bytes memory receiptBytes = ReceiptLib.encodeReceipt(receipts[i]);
             hashedLogsVec[i] = uint256(keccak256(receiptBytes));
         }
 
         // Compute Merkle tree
         (Pairing.G1Point memory commitment, bytes32 merkleRoot, bytes[] memory unrolledCommitmentSerialized) =
-            ovc.commitAndMerkle(commitKey, hashedLogsVec);
+            MerkleTreeLib.commitAndMerkle(commitKey, hashedLogsVec);
 
         // Check inclusion proof
         bytes memory testBytes = abi.encodePacked(Pairing.mul(commitKey[5], hashedLogsVec[5]));
@@ -70,7 +60,7 @@ contract OVCTests {
     }
 
     function testBuildFromReceipts() public {
-        RethPrimitives.Receipt[] memory receipts = loadReceipts();
+        Receipt[] memory receipts = loadReceipts();
         bytes32 root = patriciaTrie.buildFromReceipts(receipts);
 
         bytes32 expectedRoot = 0xb95803aa78485a25e5e3230fd13dd0e7834cf53b1d2f11248c4259caacef6fc9;
@@ -78,14 +68,14 @@ contract OVCTests {
     }
 
     function testInclusionProof() public {
-        RethPrimitives.Receipt[] memory receipts = loadReceipts();
+        Receipt[] memory receipts = loadReceipts();
         bytes32 root = patriciaTrie.buildFromReceipts(receipts);
 
         uint256 key = 62;
         bytes32[] memory proof = patriciaTrie.getProof(root, key);
         bytes memory leafValProof = patriciaTrie.verifyProof(root, key, proof);
 
-        RethPrimitives.Receipt memory testReceipt = receipts[key];
+        receipt memory testReceipt = receipts[key];
         bytes memory expectedLeafVal = RethPrimitives.encodeReceiptWithBloom(testReceipt);
 
         require(keccak256(leafValProof) == keccak256(expectedLeafVal), "Invalid leaf value");
@@ -223,8 +213,8 @@ contract OVCTests {
         // ... check other fields ...
     }
 
-    function loadReceipts() internal pure returns (RethPrimitives.Receipt[] memory) {
-        RethPrimitives.Receipt[] memory receipts = new RethPrimitives.Receipt[](100);
+    function loadReceipts() internal pure returns (Receipt[] memory) {
+        Receipt[] memory receipts = new Receipt[](100);
         // ... populate receipts ...
         return receipts;
     }

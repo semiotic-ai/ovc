@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./utils/Pairing.sol";
-import "./utils/MerkleProof.sol";
+import {Pairing} from "./utils/Pairing.sol";
+import {MerkleTreeLib} from "./lib/MerkleTreeLib.sol";
 
-contract FilteredEventProof {
+import {Receipt} from "./ReceiptProof.sol";
+
+library FilteredReceiptProof {
     using Pairing for Pairing.G1Point;
-
-    struct Receipt {
-        // Define the structure of your Receipt here
-        // This is a placeholder and should be replaced with later implementation
-        bytes data;
-    }
 
     struct Event {
         // Define the structure of your Event here
@@ -81,7 +77,7 @@ contract FilteredEventProof {
 
         // Check that inclusion proof is valid with computed commitment
         bool validProof =
-            MerkleProof.verify(self.inclusionProof, rootHash, keccak256(serializedCommitmentBytes), disagreementIdx);
+            MerkleTreeLib.verify(self.inclusionProof, rootHash, keccak256(serializedCommitmentBytes), disagreementIdx);
 
         if (!validProof) {
             return false;
@@ -95,15 +91,6 @@ contract FilteredEventProof {
     }
 
     // Helper functions
-
-    function getProof(Receipt memory receipt, Receipt[] memory leaves) public pure returns (bytes32[] memory) {
-        // Implement the logic to get the proof
-        // This is a placeholder and should be replaced with later implementation
-        bytes32[] memory proof = new bytes32[](1);
-        proof[0] = keccak256(abi.encode(receipt));
-        return proof;
-    }
-
     function encodeReceipt(Receipt memory receipt) internal pure returns (bytes memory) {
         // Implement the encoding of your Receipt structure
         // This is a placeholder and should be replaced with later implementation

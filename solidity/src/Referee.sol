@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
-
-import {MerkleTreeLib} from "./lib/MerkleTree.sol";
-import {IReferee} from "./interface/IReferee.sol";
-import {IProofSystem} from "./interface/IProofSystem.sol";
-import {Pairing} from "./utils/Pairing.sol";
-
-import {OpenKind, Winner, StepResponse} from "./interfaces/IOVC.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {MerkleTreeLib} from "../src/lib/MerkleTreeLib.sol";
+import {IReferee} from "../src/interface/IReferee.sol";
+import {IProofSystem} from "../src/interface/IProofSystem.sol";
+import {Pairing} from "../src/utils/Pairing.sol";
+import {StepResponse, OpenKind, ResponseType, Winner} from "./interface/IOVC.sol";
 
 contract Referee is IReferee {
     using Pairing for Pairing.G1Point;
-    using ProverLib for *;
 
     bytes32 public prover1Root;
     bytes32 public prover2Root;

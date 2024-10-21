@@ -1,80 +1,99 @@
 // This code is taken from https://github.com/JacobEberhardt/ZoKrates
 
-pragma solidity ^0.4.19;
+pragma solidity ^0.8.0;
 
 library Pairing {
     struct G1Point {
-        uint X;
-        uint Y;
+        uint256 X;
+        uint256 Y;
     }
     // Encoding of field elements is: X[0] * z + X[1]
+
     struct G2Point {
-        uint[2] X;
-        uint[2] Y;
+        uint256[2] X;
+        uint256[2] Y;
     }
     /// @return the generator of G1
-    function P1() internal pure returns (G1Point) {
+
+    function P1() internal pure returns (G1Point memory) {
         return G1Point(1, 2);
     }
     /// @return the generator of G2
-    function P2() internal pure returns (G2Point) {
+
+    function P2() internal pure returns (G2Point memory) {
         return G2Point(
-            [11559732032986387107991004021392285783925812861821192530917403151452391805634,
-             10857046999023057135944570762232829481370756359578518086990519993285655852781],
-            [4082367875863433681332203403145435568316851327593401208105741076214120093531,
-             8495653923123431417604973247489272438418190587263600148770280649306958101930]
+            [
+                11559732032986387107991004021392285783925812861821192530917403151452391805634,
+                10857046999023057135944570762232829481370756359578518086990519993285655852781
+            ],
+            [
+                4082367875863433681332203403145435568316851327593401208105741076214120093531,
+                8495653923123431417604973247489272438418190587263600148770280649306958101930
+            ]
         );
     }
     /// @return the negation of p, i.e. p.add(p.negate()) should be zero.
-    function negate_G1(G1Point p) pure internal returns (G1Point) {
+
+    function negate_G1(G1Point memory p) internal pure returns (G1Point memory) {
         // The prime q in the base field F_q for G1
-        uint q = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
-        if (p.X == 0 && p.Y == 0)
+        uint256 q = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
+        if (p.X == 0 && p.Y == 0) {
             return G1Point(0, 0);
+        }
         return G1Point(p.X, q - (p.Y % q));
     }
-    
-    /// @return the sum of two points of G1
-    function add_G1(G1Point p1, G1Point p2) internal returns (G1Point r) {
-        uint[4] memory input;
+
+    /// return the sum of two points of G1
+    function add_G1(G1Point memory p1, G1Point memory p2) internal view returns (G1Point memory r) {
+        uint256[4] memory input;
         input[0] = p1.X;
         input[1] = p1.Y;
         input[2] = p2.X;
         input[3] = p2.Y;
         bool success;
         assembly {
-            success := call(sub(gas, 2000), 6, 0, input, 0xc0, r, 0x60)
+            success := staticcall(gas(), 6, input, 0xc0, r, 0x60)
             // Use "invalid" to make gas estimation work
-            switch success case 0 { invalid }
+            switch success
+            case 0 { invalid() }
         }
-        require(success);
+        require(success, "pairing-add-failed");
     }
-    /// @return the product of a point on G1 and a scalar, i.e.
+
+    /// return the product of a point on G1 and a scalar, i.e.
     /// p == p.mul(1) and p.add(p) == p.mul(2) for all points p.
-    function mul_G1(G1Point p, uint s) internal returns (G1Point r) {
-        uint[3] memory input;
+    function mul_G1(G1Point memory p, uint256 s) internal returns (G1Point memory r) {
+        uint256[3] memory input;
         input[0] = p.X;
         input[1] = p.Y;
         input[2] = s;
         bool success;
         assembly {
-            success := call(sub(gas, 2000), 7, 0, input, 0x80, r, 0x60)
-            // Use "invalid" to make gas estimation work
-            switch success case 0 { invalid }
+            success :=
+                staticcall(
+                    sub(gas(), 2000), // gas
+                    5, // address (5 for MODEXP)
+                    input, // input data pointer
+                    0x80, // input data length
+                    r, // output data pointer
+                    0x60 // output data length
+                )
+            switch success
+            case 0 { invalid() }
         }
-        require (success);
+        require(success);
     }
     /// @return the result of computing the pairing check
     /// e(p1[0], p2[0]) *  .... * e(p1[n], p2[n]) == 1
     /// For example pairing([P1(), P1().negate()], [P2(), P2()]) should
     /// return true.
-    function pairing(G1Point[] p1, G2Point[] p2) internal returns (bool) {
+
+    function pairing(G1Point[] memory p1, G2Point[] memory p2) internal returns (bool) {
         require(p1.length == p2.length);
-        uint elements = p1.length;
-        uint inputSize = elements * 6;
-        uint[] memory input = new uint[](inputSize);
-        for (uint i = 0; i < elements; i++)
-        {
+        uint256 elements = p1.length;
+        uint256 inputSize = elements * 6;
+        uint256[] memory input = new uint256[](inputSize);
+        for (uint256 i = 0; i < elements; i++) {
             input[i * 6 + 0] = p1[i].X;
             input[i * 6 + 1] = p1[i].Y;
             input[i * 6 + 2] = p2[i].X[0];
@@ -82,18 +101,23 @@ library Pairing {
             input[i * 6 + 4] = p2[i].Y[0];
             input[i * 6 + 5] = p2[i].Y[1];
         }
-        uint[1] memory out;
+        uint256[1] memory out;
         bool success;
         assembly {
-            success := call(sub(gas, 2000), 8, 0, add(input, 0x20), mul(inputSize, 0x20), out, 0x20)
+            success := staticcall(gas(), 8, add(input, 0x20), mul(inputSize, 0x20), out, 0x20)
             // Use "invalid" to make gas estimation work
-            switch success case 0 { invalid }
+            switch success
+            case 0 { invalid() }
         }
         require(success);
         return out[0] != 0;
     }
     /// Convenience method for a pairing check for two pairs.
-    function pairingProd2(G1Point a1, G2Point a2, G1Point b1, G2Point b2) internal returns (bool) {
+
+    function pairingProd2(G1Point memory a1, G2Point memory a2, G1Point memory b1, G2Point memory b2)
+        internal
+        returns (bool)
+    {
         G1Point[] memory p1 = new G1Point[](2);
         G2Point[] memory p2 = new G2Point[](2);
         p1[0] = a1;
@@ -103,10 +127,14 @@ library Pairing {
         return pairing(p1, p2);
     }
     /// Convenience method for a pairing check for three pairs.
+
     function pairingProd3(
-            G1Point a1, G2Point a2,
-            G1Point b1, G2Point b2,
-            G1Point c1, G2Point c2
+        G1Point memory a1,
+        G2Point memory a2,
+        G1Point memory b1,
+        G2Point memory b2,
+        G1Point memory c1,
+        G2Point memory c2
     ) internal returns (bool) {
         G1Point[] memory p1 = new G1Point[](3);
         G2Point[] memory p2 = new G2Point[](3);
@@ -119,11 +147,16 @@ library Pairing {
         return pairing(p1, p2);
     }
     /// Convenience method for a pairing check for four pairs.
+
     function pairingProd4(
-            G1Point a1, G2Point a2,
-            G1Point b1, G2Point b2,
-            G1Point c1, G2Point c2,
-            G1Point d1, G2Point d2
+        G1Point memory a1,
+        G2Point memory a2,
+        G1Point memory b1,
+        G2Point memory b2,
+        G1Point memory c1,
+        G2Point memory c2,
+        G1Point memory d1,
+        G2Point memory d2
     ) internal returns (bool) {
         G1Point[] memory p1 = new G1Point[](4);
         G2Point[] memory p2 = new G2Point[](4);
@@ -137,4 +170,6 @@ library Pairing {
         p2[3] = d2;
         return pairing(p1, p2);
     }
+
+    function random(uint256 a) internal returns (G1Point memory) {}
 }

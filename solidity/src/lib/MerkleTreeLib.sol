@@ -81,7 +81,6 @@ library MerkleTreeLib {
         uint256 fieldElement = uint256(hash);
 
         // Ensure the value is within a typical prime field range
-        // This is an example prime, you should use the actual prime for your field
         uint256 prime = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
         return fieldElement % prime;

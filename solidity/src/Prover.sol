@@ -6,7 +6,8 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 
 import {IProver} from "./interface/IProver.sol";
 import {Pairing} from "./utils/Pairing.sol";
-import {OpenKind, ResponseType, StepResponse, Response, Winner} from "./interface/IOVC.sol";
+import {OpenKind, Response, ResponseType, StepResponse} from "./interface/IOVC.sol";
+import {MerkleTreeLib} from "./lib/MerkleTreeLib.sol";
 
 contract Prover is IProver {
     using ECDSA for bytes32;
@@ -24,7 +25,8 @@ contract Prover is IProver {
             hashVec[i] = hashVec(dataBytesVec[i]);
         }
 
-        (Pairing memory _commitment, bytes32 _root, bytes32[] memory leaves) = commitAndMerkle(commitKey, hashVec);
+        (Pairing memory _commitment, bytes32 _root, bytes32[] memory leaves) =
+            MerkleTreeLib.commitAndMerkle(commitKey, hashVec);
 
         root = _root;
         uint256 mid = leaves.length / 2;
@@ -50,8 +52,8 @@ contract Prover is IProver {
 
     // Generates the initial response in the OVC protocol
     function firstResponse() public view returns (StepResponse memory) {
-        bytes32 leftRoot = computeMerkleRoot(leftLeaves);
-        bytes32 rightRoot = computeMerkleRoot(rightLeaves);
+        bytes32 leftRoot = MerkleTreeLib.computeMerkleRoot(leftLeaves);
+        bytes32 rightRoot = MerkleTreeLib.computeMerkleRoot(rightLeaves);
 
         return StepResponse({left: leftRoot, right: rightRoot});
     }
@@ -94,8 +96,8 @@ contract Prover is IProver {
                 stepResponse: StepResponse({left: leftLeafHash, right: rightLeafHash})
             });
         } else {
-            bytes32 leftRoot = computeMerkleRoot(leftSubLeaves);
-            bytes32 rightRoot = computeMerkleRoot(rightSubLeaves);
+            bytes32 leftRoot = MerkleTreeLib.computeMerkleRoot(leftSubLeaves);
+            bytes32 rightRoot = MerkleTreeLib.computeMerkleRoot(rightSubLeaves);
 
             leftLeaves = leftSubLeaves;
             rightLeaves = rightSubLeaves;
